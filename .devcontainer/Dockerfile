@@ -74,6 +74,28 @@ RUN echo "Installing sqlpackage" \
     && chmod a+x /opt/sqlpackage/sqlpackage \
     && ln -sfn /opt/mssql-tools/bin/sqlcmd /usr/bin/sqlcmd
 
+
+# Custom
+# gettext -> needed for envsubst
+RUN apt-get -y install gettext
+# Install k9S
+RUN wget https://github.com/derailed/k9s/releases/download/v0.24.15/k9s_Linux_x86_64.tar.gz && \
+    tar zxf k9s_Linux_x86_64.tar.gz k9s && \
+    mv k9s /usr/local/bin/k9s && \
+    chmod +x /usr/local/bin/k9s && \
+    rm k9s_Linux_x86_64.tar.gz
+# Install Krew
+RUN  set -x; cd "$(mktemp -d)" && \
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" && \
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" && \
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.tar.gz" && \
+  tar zxvf krew.tar.gz && \
+  KREW=./krew-"${OS}_${ARCH}" && \
+  "$KREW" install krew && \
+  rm krew.tar.gz
+RUN echo 'export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"' >>~/.bashrc
+
+
 # Clean up
 RUN apt-get autoremove -y \
     && apt-get clean -y \
