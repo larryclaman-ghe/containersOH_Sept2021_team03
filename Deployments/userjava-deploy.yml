@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userjava
+  labels:
+    app: userjava
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: userjava
+  template:
+    metadata:
+      labels:
+        app: userjava
+    spec:
+      containers:
+      - name: userjava
+        image: registryzxc7268.azurecr.io/userjava:latest
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        env:
+        - name: SQL_SERVER
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_HOST
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_USERNAME
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_PASSWORD
+        - name: SQL_DBNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_DATABASE
