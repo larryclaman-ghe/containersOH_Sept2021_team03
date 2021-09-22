@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userprofile
+  labels:
+    app: userprofile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: userprofile
+  template:
+    metadata:
+      labels:
+        app: userprofile
+    spec:
+      containers:
+      - name: userprofile
+        image: registryzxc7268.azurecr.io/userprofile:latest
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        env:
+        - name: SQL_SERVER
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_HOST
+        - name: SQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_USERNAME
+        - name: SQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_PASSWORD
+        - name: SQL_DBNAME
+          valueFrom:
+            secretKeyRef:
+              name: db-connection
+              key: SQL_DATABASE
