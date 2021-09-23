@@ -190,7 +190,36 @@ KubeNodeInventory
 | summarize AvgUsagePercent = avg(UsagePercent) by TimeGenerated, Node
 | order by TimeGenerated asc
 
+6. AllPodCpu
+
+KubeEvents
+| where Namespace == "insurance" and ObjectKind == "Pod"
+| project TimeGenerated, Node = Computer, PodName = Name, Reason
+| order by TimeGenerated desc
 
 
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| order by TimeGenerated desc
+| project TimeGenerated, PodName=Name, Status = ContainerStatus, ContainerRestartCount, Node=Computer
+| distinct PodName, Status
+
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Namespace in ('web', 'api', 'insurance')
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "cpuUsageNanoCores"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+7. 
 
 
