@@ -1,0 +1,196 @@
+
+Queries :
+
+
+1. InsurancePodActivity
+
+KubePodInventory | where TimeGenerated > ago(3m) |  where Namespace == "insurance"
+| order by TimeGenerated desc
+| project ControllerName,ContainerStatus,PodName=Name,NodeName=Computer 
+
+
+2. INsurancePodCpu
+
+KubePodInventory | where TimeGenerated > ago(3m) |  where Namespace == "insurance"
+| order by TimeGenerated desc
+| project ControllerName,ContainerStatus,PodName=Name,NodeName=Computer 
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "cpuUsageNanoCores"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+
+3. InsurancePodMemory 
+
+
+KubePodInventory | where TimeGenerated > ago(3m) |  where Namespace == "insurance"
+| order by TimeGenerated desc
+| project ControllerName,ContainerStatus,PodName=Name,NodeName=Computer 
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "cpuUsageNanoCores"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "memoryWorkingSetBytes"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+
+
+4. NodeCpuUsage
+
+KubePodInventory | where TimeGenerated > ago(3m) |  where Namespace == "insurance"
+| order by TimeGenerated desc
+| project ControllerName,ContainerStatus,PodName=Name,NodeName=Computer 
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "cpuUsageNanoCores"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "memoryWorkingSetBytes"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+KubeNodeInventory
+| where ClusterName == "team03_c04_aks"
+| distinct ClusterName, Computer
+| join hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'cpuCapacityNanoCores'
+    | summarize LimitValue = max(CounterValue) by Computer, CounterName
+    | project Computer, LimitValue
+) on Computer
+| join kind=inner hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'cpuUsageNanoCores'
+    | project Computer, UsageValue = CounterValue, TimeGenerated
+) on Computer
+| project Node = Computer, TimeGenerated, UsagePercent = UsageValue * 100 / LimitValue
+| summarize AvgUsagePercent = avg(UsagePercent) by TimeGenerated, Node
+| order by TimeGenerated asc
+
+
+5. NodeMemoryUsage
+
+KubePodInventory | where TimeGenerated > ago(3m) |  where Namespace == "insurance"
+| order by TimeGenerated desc
+| project ControllerName,ContainerStatus,PodName=Name,NodeName=Computer 
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "cpuUsageNanoCores"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+KubePodInventory
+| where ClusterName == "team03_c04_aks" and Name contains "insurance"
+| extend ControllerEndName = split(ContainerName, '/')[1]
+| project PodName=Name, serviceNode = strcat(ControllerEndName, "@", Computer)
+| join (
+    Perf 
+| where ObjectName == "K8SContainer" and CounterName == "memoryWorkingSetBytes"
+| extend InstanceNameArray = split(InstanceName, '/')
+| extend ServiceProvider = tostring(InstanceNameArray[6]) , ContainerService = tostring(InstanceNameArray[10]) , AKS = tostring(InstanceNameArray[8])
+| project ServiceProvider, AKS, ContainerService, Node = Computer, Computer, ObjectName, CounterName , CounterValue , TimeGenerated , serviceNode = strcat(ContainerService, "@" , Computer)
+) on serviceNode
+| summarize AvgWorkingSetBytes = avg(CounterValue) by PodName, bin(TimeGenerated, 1)
+| order by TimeGenerated asc
+
+KubeNodeInventory
+| where ClusterName == "team03_c04_aks"
+| distinct ClusterName, Computer
+| join hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'cpuCapacityNanoCores'
+    | summarize LimitValue = max(CounterValue) by Computer, CounterName
+    | project Computer, LimitValue
+) on Computer
+| join kind=inner hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'cpuUsageNanoCores'
+    | project Computer, UsageValue = CounterValue, TimeGenerated
+) on Computer
+| project Node = Computer, TimeGenerated, UsagePercent = UsageValue * 100 / LimitValue
+| summarize AvgUsagePercent = avg(UsagePercent) by TimeGenerated, Node
+| order by TimeGenerated asc
+
+KubeNodeInventory
+| where ClusterName == "team03_c04_aks"
+| distinct ClusterName, Computer
+| join hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'memoryCapacityBytes'
+    | summarize LimitValue = max(CounterValue) by Computer, CounterName
+    | project Computer, LimitValue
+) on Computer
+| join kind=inner hint.strategy=shuffle (
+    Perf
+    | where ObjectName == 'K8SNode' and CounterName == 'memoryRssBytes'
+    | project Computer, UsageValue = CounterValue, TimeGenerated
+) on Computer
+| project Node = Computer, TimeGenerated, UsagePercent = UsageValue * 100 / LimitValue
+| summarize AvgUsagePercent = avg(UsagePercent) by TimeGenerated, Node
+| order by TimeGenerated asc
+
+
+
+
+
