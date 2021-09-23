@@ -22,24 +22,14 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
-        env:
-        - name: SQL_SERVER
-          valueFrom:
-            secretKeyRef:
-              name: db-connection
-              key: SQL_HOST
-        - name: SQL_USER
-          valueFrom:
-            secretKeyRef:
-              name: db-connection
-              key: SQL_USERNAME
-        - name: SQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-connection
-              key: SQL_PASSWORD
-        - name: SQL_DBNAME
-          valueFrom:
-            secretKeyRef:
-              name: db-connection
-              key: SQL_DATABASE
+        volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/secrets"
+          readOnly: true
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: "team03akv"
